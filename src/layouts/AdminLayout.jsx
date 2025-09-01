@@ -47,7 +47,7 @@ const AdminLayout = ({ children }) => {
           <div className="flex items-center gap-4">
             <button
               onClick={() => dispatch(toggleTheme())}
-              className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-yellow-400"
+              className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-yellow-400 cursor-pointer"
             >
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>

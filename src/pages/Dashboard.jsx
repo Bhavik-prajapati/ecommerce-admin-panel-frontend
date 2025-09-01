@@ -1,66 +1,106 @@
+import { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchDashboardData } from "../store/dashboardSlice";
+import { updateOrder, resetOrderState } from "../store/orderSlice";
+import UpdateOrderModal from "../Components/UpdateOrderModal";
 
 const Dashboard = () => {
-  const stats = [
-    { title: "Total Sales", value: "₹1,20,000", color: "from-orange-400 to-pink-500" },
-    { title: "Orders", value: "350", color: "from-blue-400 to-indigo-500" },
-    { title: "Customers", value: "120", color: "from-green-400 to-emerald-500" },
-    { title: "Products", value: "58", color: "from-purple-400 to-fuchsia-500" },
-  ];
+  const dispatch = useDispatch();
 
-  const orders = [
-    { id: "#1234", customer: "John Doe", amount: "₹1200", status: "Paid" },
-    { id: "#1235", customer: "Jane Smith", amount: "₹850", status: "Pending" },
-    { id: "#1236", customer: "Mark Lee", amount: "₹560", status: "Paid" },
+  const { data, loading, error } = useSelector((state) => state.dashboard);
+  const { loading: updating, success, error: updateError } = useSelector((state) => state.order);
+
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    dispatch(fetchDashboardData());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (success) {
+      // Close modal and refresh dashboard data
+      setIsModalOpen(false);
+      dispatch(fetchDashboardData());
+      dispatch(resetOrderState());
+    }
+  }, [success, dispatch]);
+
+  const handleUpdateOrder = (orderId, status, expectedDate) => {
+    dispatch(updateOrder({ orderId, payment_status: status, expected_delivery_date: expectedDate }));
+  };
+
+  const stats = [
+    { title: "Total Sales", value: `₹${data?.get_admin_dashboard_data?.summary?.total_sales || 0}`, color: "from-orange-400 to-pink-500" },
+    { title: "Orders", value: data?.get_admin_dashboard_data?.summary?.total_orders || 0, color: "from-blue-400 to-indigo-500" },
+    { title: "Customers", value: data?.get_admin_dashboard_data?.summary?.total_customers || 0, color: "from-green-400 to-emerald-500" },
+    { title: "Products", value: data?.get_admin_dashboard_data?.summary?.total_products || 0, color: "from-purple-400 to-fuchsia-500" },
   ];
 
   return (
     <AdminLayout>
       <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((s, i) => (
-          <div
-            key={i}
-            className={`p-6 rounded-2xl shadow-lg text-white bg-gradient-to-r ${s.color}`}
-          >
-            <h2 className="text-lg">{s.title}</h2>
-            <p className="text-2xl font-bold">{s.value}</p>
-          </div>
-        ))}
-      </div>
+      {loading && <p className="text-blue-500">Loading dashboard...</p>}
+      {error && <p className="text-red-500">Error: {error}</p>}
 
-      {/* Recent Orders Table */}
+      {!loading && !error && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((s, i) => (
+            <div key={i} className={`p-6 rounded-2xl shadow-lg text-white bg-gradient-to-r ${s.color}`}>
+              <h2 className="text-lg">{s.title}</h2>
+              <p className="text-2xl font-bold">{s.value}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="bg-white dark:bg-gray-800 shadow rounded-2xl p-6">
         <h2 className="text-xl font-semibold mb-4">Recent Orders</h2>
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100 dark:bg-gray-700 text-left">
-              <th className="p-3">Order ID</th>
-              <th className="p-3">Customer</th>
-              <th className="p-3">Amount</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order, i) => (
-              <tr key={i} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td className="p-3">{order.id}</td>
-                <td className="p-3">{order.customer}</td>
-                <td className="p-3">{order.amount}</td>
-                <td
-                  className={`p-3 font-medium ${
-                    order.status === "Paid" ? "text-green-600" : "text-yellow-500"
-                  }`}
-                >
-                  {order.status}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {data?.get_admin_dashboard_data?.orders?.map((order) => (
+            <div key={order.id} className="bg-white dark:bg-gray-800 rounded-2xl shadow p-4 flex flex-col justify-between">
+              <div className="mb-2">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Order #{order.id}</h3>
+                <p className="text-sm text-gray-500">User ID: {order.user_id}</p>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <p className="text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">Amount:</span> {order.total_price}
+                </p>
+                <p className="text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">Status:</span> {order.payment_status}
+                </p>
+                <p className="text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">Expected Delivery:</span> {new Date(order.expected_delivery_date).toLocaleDateString()}
+                </p>
+              </div>
+
+              <button
+                className="mt-3 bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-full text-sm"
+                onClick={() => {
+                  setSelectedOrder(order);
+                  setIsModalOpen(true);
+                }}
+              >
+                Update Delivery Status
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Update Order Modal */}
+      <UpdateOrderModal
+        order={selectedOrder}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onUpdate={handleUpdateOrder}
+        loading={updating}
+        error={updateError}
+      />
     </AdminLayout>
   );
 };
