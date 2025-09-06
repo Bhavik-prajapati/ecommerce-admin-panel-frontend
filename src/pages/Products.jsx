@@ -11,6 +11,7 @@ import AddProductModal from "../Components/AddProductModal";
 import { toast } from "react-toastify";
 import axios from "axios";
 import ReviewsModal from "../Components/ReviewsModal";
+import sentimentApi from "../api/sentimentApi";
 
 
 
@@ -62,7 +63,7 @@ const Products = () => {
 
   const handleAnalyze = async (reviewId, text) => {
     try {
-      const response = await axios.post("http://127.0.0.1:8000/analyze", { text });
+      const response = await sentimentApi.post("/analyze", { text });
       setSentiments((prev) => ({ ...prev, [reviewId]: response.data }));
     } catch (err) {
       toast.error("Sentiment analysis failed ❌");
@@ -80,7 +81,7 @@ const Products = () => {
   try {
     const reviewTexts = reviews.map((rev) => rev.comment);
 
-    const response = await axios.post("http://127.0.0.1:8000/analyze", {
+    const response = await sentimentApi.post("/analyze", {
       reviews: reviewTexts,
     });
 
