@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchDashboardData } from "../store/dashboardSlice";
 import { updateOrder, resetOrderState } from "../store/orderSlice";
 import UpdateOrderModal from "../Components/UpdateOrderModal";
+import { toast } from "react-toastify";
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -20,16 +21,51 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (success) {
-      // Close modal and refresh dashboard data
       setIsModalOpen(false);
       dispatch(fetchDashboardData());
       dispatch(resetOrderState());
     }
   }, [success, dispatch]);
+  
+ 
 
-  const handleUpdateOrder = (orderId, status, expectedDate) => {
-    dispatch(updateOrder({ orderId, payment_status: status, expected_delivery_date: expectedDate }));
-  };
+  const handleUpdateOrder = async (orderId, status, expectedDate) => {
+  const toastId = toast.loading("Updating order..."); // show loader
+
+  try {
+    const resultAction = await dispatch(
+      updateOrder({
+        orderId,
+        payment_status: status,
+        expected_delivery_date: expectedDate,
+      })
+    );
+
+    if (updateOrder.fulfilled.match(resultAction)) {
+      toast.update(toastId, {
+        render: "Order updated successfully",
+        type: "success",
+        isLoading: false,
+        autoClose: 3000,
+      });
+    } else {
+      toast.update(toastId, {
+        render: resultAction.error?.message || "Failed to update order",
+        type: "error",
+        isLoading: false,
+        autoClose: 3000,
+      });
+    }
+  } catch (error) {
+    toast.update(toastId, {
+      render: "Something went wrong while updating the order",
+      type: "error",
+      isLoading: false,
+      autoClose: 3000,
+    });
+  }
+};
+
 
   const stats = [
     { title: "Total Sales", value: `₹${data?.get_admin_dashboard_data?.summary?.total_sales || 0}`, color: "from-orange-400 to-pink-500" },
@@ -92,7 +128,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Update Order Modal */}
       <UpdateOrderModal
         order={selectedOrder}
         isOpen={isModalOpen}

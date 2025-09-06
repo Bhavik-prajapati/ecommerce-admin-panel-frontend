@@ -6,7 +6,7 @@ export const fetchProducts = createAsyncThunk(
   "products/fetchProducts",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await apiClient.get("/admin/products");
+      const response = await apiClient.get("/products");
       return response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || "Server Error");
@@ -19,7 +19,7 @@ export const addProduct = createAsyncThunk(
   "products/addProduct",
   async (newProduct, { rejectWithValue }) => {
     try {
-      const response = await apiClient.post("/admin/products", newProduct);
+      const response = await apiClient.post("/products", newProduct);
       return response.data; // newly created product from backend
     } catch (err) {
       return rejectWithValue(err.response?.data || "Server Error");
@@ -27,12 +27,15 @@ export const addProduct = createAsyncThunk(
   }
 );
 
-
+// Update product
 export const updateProduct = createAsyncThunk(
   "products/updateProduct",
   async (updatedProduct, { rejectWithValue }) => {
     try {
-      const response = await apiClient.put(`/admin/products/${updatedProduct.id}`, updatedProduct);
+      const response = await apiClient.put(
+        `/products/${updatedProduct.id}`,
+        updatedProduct
+      );
       return response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || "Server Error");
@@ -40,6 +43,18 @@ export const updateProduct = createAsyncThunk(
   }
 );
 
+// Delete product
+export const deleteProduct = createAsyncThunk(
+  "products/deleteProduct", // ✅ fixed name
+  async ({ id }, { rejectWithValue }) => {
+    try {
+      await apiClient.delete(`/products/${id}`, { withCredentials: true });
+      return id; // return deleted product id to update state
+    } catch (err) {
+      return rejectWithValue(err.response?.data || "Server Error");
+    }
+  }
+);
 
 //
 // --- Slice ---
@@ -61,10 +76,7 @@ const productSlice = createSlice({
       })
       .addCase(fetchProducts.fulfilled, (state, action) => {
         state.loading = false;
-        // filter out empty objects, just in case API sends [{}]
-        state.products = action.payload.filter(
-          (item) => Object.keys(item).length > 0
-        );
+        state.products=action.payload.products;
       })
       .addCase(fetchProducts.rejected, (state, action) => {
         state.loading = false;
@@ -83,23 +95,38 @@ const productSlice = createSlice({
       .addCase(addProduct.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
+      })
+
+      // Update product
+      .addCase(updateProduct.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateProduct.fulfilled, (state, action) => {
+        state.loading = false;
+        const index = state.products.findIndex((p) => p.id === action.payload.id);
+        if (index !== -1) {
+          state.products[index] = action.payload;
+        }
+      })
+      .addCase(updateProduct.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+
+      // Delete product
+      .addCase(deleteProduct.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteProduct.fulfilled, (state, action) => {
+        state.loading = false;
+        state.products = state.products.filter((p) => p.id !== action.payload);
+      })
+      .addCase(deleteProduct.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
-    
-    builder.addCase(updateProduct.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    })
-    .addCase(updateProduct.fulfilled, (state, action) => {
-      state.loading = false;
-      const index = state.products.findIndex((p) => p.id === action.payload.id);
-      if (index !== -1) {
-        state.products[index] = action.payload;
-      }
-    })
-    .addCase(updateProduct.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    });
   },
 });
 

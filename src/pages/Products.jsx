@@ -1,32 +1,102 @@
 import React, { useEffect, useState } from "react";
 import AdminLayout from "../layouts/AdminLayout";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchProducts, addProduct, updateProduct } from "../store/productSlice";
+import {
+  fetchProducts,
+  addProduct,
+  updateProduct,
+  deleteProduct,
+} from "../store/productSlice";
 import AddProductModal from "../Components/AddProductModal";
+import { toast } from "react-toastify";
+import axios from "axios";
+import ReviewsModal from "../Components/ReviewsModal";
+
+
 
 const Products = () => {
-  const { products, loading, error } = useSelector((s) => s.products);
+  const { products, loading, error } = useSelector((state) => state.products);
   const dispatch = useDispatch();
 
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [selectedReviews, setSelectedReviews] = useState([]);
+  const [sentiments, setSentiments] = useState({});
 
   useEffect(() => {
     dispatch(fetchProducts());
   }, [dispatch]);
 
-  // ✅ Handle Save / Update
-  const handleSave = (product) => {
-    if (editingProduct) {
-      // update existing product
-      dispatch(updateProduct({ ...product, id: editingProduct.id }));
-    } else {
-      // add new product
-      dispatch(addProduct(product));
+  const handleSave = async (product) => {
+    try {
+      const resultAction = editingProduct
+        ? await dispatch(updateProduct({ ...product, id: editingProduct.id }))
+        : await dispatch(addProduct(product));
+
+      if (
+        (updateProduct.fulfilled && updateProduct.fulfilled.match(resultAction)) ||
+        (addProduct.fulfilled && addProduct.fulfilled.match(resultAction))
+      ) {
+        toast.success(editingProduct ? "Product updated successfully" : "Product added successfully");
+        setShowModal(false);
+        setEditingProduct(null);
+      } else {
+        toast.error(resultAction.error?.message || "Failed to save product");
+      }
+    } catch (error) {
+      toast.error("Something went wrong while saving the product");
     }
-    setShowModal(false);
-    setEditingProduct(null);
   };
+
+  const handleDeleteProduct = async (prodId) => {
+    if (!window.confirm("Are you sure you want to delete this product?")) return;
+
+    try {
+      await dispatch(deleteProduct({ id: prodId })).unwrap();
+      toast.success("Product deleted successfully ✅");
+    } catch (err) {
+      toast.error(err || "Failed to delete product ❌");
+    }
+  };
+
+  const handleAnalyze = async (reviewId, text) => {
+    try {
+      const response = await axios.post("http://127.0.0.1:8000/analyze", { text });
+      setSentiments((prev) => ({ ...prev, [reviewId]: response.data }));
+    } catch (err) {
+      toast.error("Sentiment analysis failed ❌");
+    }
+  };
+
+ /*  const handleShowReviews = (reviews) => {
+    setSelectedReviews(reviews);
+    setShowReviewsModal(true);
+  }; */
+
+
+  const handleShowReviews = async (reviews) => {
+  setSelectedReviews(reviews);
+  try {
+    const reviewTexts = reviews.map((rev) => rev.comment);
+
+    const response = await axios.post("http://127.0.0.1:8000/analyze", {
+      reviews: reviewTexts,
+    });
+
+    // Map results back to review IDs
+    const newSentiments = {};
+    response.data.forEach((res, idx) => {
+      newSentiments[reviews[idx].id] = res;
+    });
+
+    setSentiments(newSentiments);
+    setShowReviewsModal(true);
+  } catch (err) {
+    toast.error("Failed to analyze all reviews ❌");
+  }
+};
+
 
   return (
     <AdminLayout>
@@ -43,7 +113,7 @@ const Products = () => {
         </button>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 shadow rounded-2xl p-6">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-2xl p-6 overflow-x-auto">
         {loading && <p>Loading...</p>}
         {error && <p className="text-red-500">{error}</p>}
 
@@ -56,14 +126,16 @@ const Products = () => {
               <th className="p-3 text-left">Category</th>
               <th className="p-3 text-left">Stock</th>
               <th className="p-3 text-left">Rating</th>
+              <th className="p-3 text-left">Reviews</th>
               <th className="p-3 text-left">Actions</th>
             </tr>
           </thead>
+
           <tbody>
             {products.map((prod) => (
               <tr
                 key={prod.id}
-                className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900"
+                className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900 align-top"
               >
                 <td className="p-3">
                   <img
@@ -76,7 +148,21 @@ const Products = () => {
                 <td className="p-3">${prod.price}</td>
                 <td className="p-3 font-medium">{prod.category_name}</td>
                 <td className="p-3">{prod.stock}</td>
-                <td className="p-3">⭐ {prod.average_rating} ({prod.rating_count})</td>
+                <td className="p-3">
+                  ⭐ {prod.average_rating} ({prod.rating_count})
+                </td>
+                <td className="p-3">
+                  {prod.reviews && prod.reviews.length > 0 ? (
+                    <button
+                      onClick={() => handleShowReviews(prod.reviews)}
+                      className="text-white-600"
+                    >
+                      Show Reviews ({prod.reviews.length})
+                    </button>
+                  ) : (
+                    <span className="text-gray-500 text-sm">No reviews</span>
+                  )}
+                </td>
                 <td className="p-3">
                   <button
                     onClick={() => {
@@ -87,6 +173,14 @@ const Products = () => {
                   >
                     Edit
                   </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteProduct(prod.id)}
+                    className="px-3 py-1 bg-red-700 text-white rounded-lg hover:bg-red-800 cursor-pointer m-2"
+                  >
+                    <i className="fa-solid fa-trash-can"></i>
+                  </button>
                 </td>
               </tr>
             ))}
@@ -94,7 +188,7 @@ const Products = () => {
         </table>
       </div>
 
-      {/* ✅ Add / Edit Product Modal */}
+      {/* Add / Edit Product Modal */}
       <AddProductModal
         isOpen={showModal}
         onClose={() => {
@@ -103,6 +197,15 @@ const Products = () => {
         }}
         onSave={handleSave}
         initialData={editingProduct}
+      />
+
+      {/* Reviews Modal */}
+      <ReviewsModal
+        isOpen={showReviewsModal}
+        onClose={() => setShowReviewsModal(false)}
+        reviews={selectedReviews}
+        analyzeSentiment={handleAnalyze}
+        sentiments={sentiments}
       />
     </AdminLayout>
   );

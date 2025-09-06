@@ -22,7 +22,7 @@ const AdminLayout = ({ children }) => {
       {/* Sidebar */}
       <aside className="w-64 bg-white dark:bg-gray-800 shadow-lg flex flex-col transition-all duration-300">
         <div className="flex items-center justify-between px-4 py-4 border-b dark:border-gray-700">
-          <h1 className="text-xl font-bold text-orange-500">Admin Panel</h1>
+          <h1 className="text-3xl font-bold text-orange-500">ShopEase</h1>
         </div>
         <nav className="flex-1 px-2 py-4 space-y-2">
           <Link to="/admin/dashboard" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-orange-100 dark:hover:bg-gray-700">
@@ -31,8 +31,8 @@ const AdminLayout = ({ children }) => {
           <Link to="/admin/products" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-orange-100 dark:hover:bg-gray-700">
             Products
           </Link>
-          <Link to="/admin/orders" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-orange-100 dark:hover:bg-gray-700">
-            Orders
+          <Link to="/admin/categories" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-orange-100 dark:hover:bg-gray-700">
+            Categories
           </Link>
         </nav>
       </aside>
