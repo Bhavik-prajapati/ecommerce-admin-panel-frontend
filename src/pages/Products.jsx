@@ -193,7 +193,6 @@ const Products = () => {
           </tbody>
         </table>
 
-        <h1>{products.length}</h1>
         {products.length > 0 ? (
           <div className="flex justify-end">
             {offset > 0 && (

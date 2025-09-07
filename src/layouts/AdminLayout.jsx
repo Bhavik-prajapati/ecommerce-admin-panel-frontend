@@ -8,7 +8,6 @@ const AdminLayout = ({ children }) => {
   const dispatch = useDispatch();
   const darkMode = useSelector((state) => state.theme.darkMode);
 
-  // ✅ Apply theme whenever darkMode changes
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add("dark");
@@ -28,11 +27,11 @@ const AdminLayout = ({ children }) => {
           <Link to="/admin/dashboard" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-orange-100 dark:hover:bg-gray-700">
             Dashboard
           </Link>
-          <Link to="/admin/products" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-orange-100 dark:hover:bg-gray-700">
-            Products
-          </Link>
           <Link to="/admin/categories" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-orange-100 dark:hover:bg-gray-700">
             Categories
+          </Link>
+          <Link to="/admin/products" className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-200 hover:bg-orange-100 dark:hover:bg-gray-700">
+            Products
           </Link>
         </nav>
       </aside>
