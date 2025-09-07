@@ -1,12 +1,10 @@
-
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchCategoriesData } from "../store/categoriesSlice";
 
-
 const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
   const dispatch = useDispatch();
-  const { data: categories, loading, error } = useSelector(state => state.categories);
+  const { data: categories } = useSelector((state) => state.categories);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -17,7 +15,9 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
     category_id: "",
   });
 
-  // fill form when editing
+  const [loadingDescription, setLoadingDescription] = useState(false);
+  const [showAiIcon, setShowAiIcon] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       dispatch(fetchCategoriesData());
@@ -39,7 +39,6 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
           image_url: "",
           category_id: "",
         });
-
       }
     }
   }, [isOpen, initialData, dispatch]);
@@ -47,13 +46,43 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
   if (!isOpen) return null;
 
   const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    // Show AI icon when user starts writing in description
+    if (name === "description" && value.trim().length > 5) {
+      setShowAiIcon(true);
+    } else if (name === "description") {
+      setShowAiIcon(false);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(formData);
-    onClose(); // close modal after save
+    onClose();
+  };
+
+  const generateBetterDescription = async () => {
+
+    try {
+      setLoadingDescription(true);
+
+      const response = await fetch("http://localhost:8000/description/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: formData.description}),
+      });
+
+      const data = await response.json();
+      setFormData((prev) => ({ ...prev, description: data.description }));
+      setShowAiIcon(false);
+    } catch (error) {
+      console.error("AI description generation failed:", error);
+    } finally {
+      setLoadingDescription(false);
+    }
   };
 
   return (
@@ -64,7 +93,7 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* name */}
+          {/* Name */}
           <div>
             <label className="block mb-1 font-semibold">Name</label>
             <input
@@ -77,18 +106,47 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
             />
           </div>
 
-          {/* description */}
-          <div>
+          {/* Description with AI icon */}
+          <div className="relative">
             <label className="block mb-1 font-semibold">Description</label>
+
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
               className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:text-white"
             />
+
+            {showAiIcon && (
+              <button
+                type="button"
+                onClick={generateBetterDescription}
+                className="absolute right-2 top-8 text-blue-500 hover:text-blue-700"
+                title="Generate smart description from title"
+                disabled={loadingDescription}
+              >
+                {loadingDescription ? (
+                  <span>⏳</span>
+                ) : (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M13 7H7v6h6V7z" />
+                    <path
+                      fillRule="evenodd"
+                      d="M5 3a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V5a2 2 0 00-2-2H5zm10 12H5V5h10v10z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </button>
+            )}
           </div>
 
-          {/* price */}
+          {/* Price */}
           <div>
             <label className="block mb-1 font-semibold">Price</label>
             <input
@@ -102,7 +160,7 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
             />
           </div>
 
-          {/* stock */}
+          {/* Stock */}
           <div>
             <label className="block mb-1 font-semibold">Stock</label>
             <input
@@ -114,7 +172,7 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
             />
           </div>
 
-          {/* image */}
+          {/* Image URL */}
           <div>
             <label className="block mb-1 font-semibold">Image URL</label>
             <input
@@ -126,7 +184,7 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
             />
           </div>
 
-          {/* category dropdown */}
+          {/* Category */}
           <div>
             <label className="block mb-1 font-semibold">Category</label>
             <select
@@ -137,15 +195,16 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
               required
             >
               <option value="">Select Category</option>
-              {categories && categories.map(cat => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
+              {categories &&
+                categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
             </select>
           </div>
 
-          {/* buttons */}
+          {/* Buttons */}
           <div className="flex justify-end gap-2 mt-4">
             <button
               type="button"
@@ -166,7 +225,5 @@ const AddProductModal = ({ isOpen, onClose, onSave, initialData }) => {
     </div>
   );
 };
-
-
 
 export default AddProductModal;

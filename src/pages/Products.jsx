@@ -13,8 +13,6 @@ import axios from "axios";
 import ReviewsModal from "../Components/ReviewsModal";
 import sentimentApi from "../api/sentimentApi";
 
-
-
 const Products = () => {
   const { products, loading, error } = useSelector((state) => state.products);
   const dispatch = useDispatch();
@@ -25,9 +23,12 @@ const Products = () => {
   const [selectedReviews, setSelectedReviews] = useState([]);
   const [sentiments, setSentiments] = useState({});
 
+  const [limit] = useState(10);
+  const [offset, setOffset] = useState(0);
+
   useEffect(() => {
-    dispatch(fetchProducts());
-  }, [dispatch]);
+    dispatch(fetchProducts({ limit, offset }));
+  }, [dispatch, limit, offset]);
 
   const handleSave = async (product) => {
     try {
@@ -36,10 +37,15 @@ const Products = () => {
         : await dispatch(addProduct(product));
 
       if (
-        (updateProduct.fulfilled && updateProduct.fulfilled.match(resultAction)) ||
+        (updateProduct.fulfilled &&
+          updateProduct.fulfilled.match(resultAction)) ||
         (addProduct.fulfilled && addProduct.fulfilled.match(resultAction))
       ) {
-        toast.success(editingProduct ? "Product updated successfully" : "Product added successfully");
+        toast.success(
+          editingProduct
+            ? "Product updated successfully"
+            : "Product added successfully"
+        );
         setShowModal(false);
         setEditingProduct(null);
       } else {
@@ -51,7 +57,8 @@ const Products = () => {
   };
 
   const handleDeleteProduct = async (prodId) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    if (!window.confirm("Are you sure you want to delete this product?"))
+      return;
 
     try {
       await dispatch(deleteProduct({ id: prodId })).unwrap();
@@ -70,34 +77,32 @@ const Products = () => {
     }
   };
 
- /*  const handleShowReviews = (reviews) => {
+  /*  const handleShowReviews = (reviews) => {
     setSelectedReviews(reviews);
     setShowReviewsModal(true);
   }; */
 
-
   const handleShowReviews = async (reviews) => {
-  setSelectedReviews(reviews);
-  try {
-    const reviewTexts = reviews.map((rev) => rev.comment);
+    setSelectedReviews(reviews);
+    try {
+      const reviewTexts = reviews.map((rev) => rev.comment);
 
-    const response = await sentimentApi.post("/analyze", {
-      reviews: reviewTexts,
-    });
+      const response = await sentimentApi.post("/analyze", {
+        reviews: reviewTexts,
+      });
 
-    // Map results back to review IDs
-    const newSentiments = {};
-    response.data.forEach((res, idx) => {
-      newSentiments[reviews[idx].id] = res;
-    });
+      // Map results back to review IDs
+      const newSentiments = {};
+      response.data.forEach((res, idx) => {
+        newSentiments[reviews[idx].id] = res;
+      });
 
-    setSentiments(newSentiments);
-    setShowReviewsModal(true);
-  } catch (err) {
-    toast.error("Failed to analyze all reviews ❌");
-  }
-};
-
+      setSentiments(newSentiments);
+      setShowReviewsModal(true);
+    } catch (err) {
+      toast.error("Failed to analyze all reviews ❌");
+    }
+  };
 
   return (
     <AdminLayout>
@@ -187,6 +192,33 @@ const Products = () => {
             ))}
           </tbody>
         </table>
+
+        <h1>{products.length}</h1>
+        {products.length > 0 ? (
+          <div className="flex justify-end">
+            {offset > 0 && (
+              <button
+                className="px-3 py-1 bg-red-700 text-white rounded-lg mt-3 mr-2"
+                onClick={() => setOffset((prev) => Math.max(prev - limit, 0))}
+              >
+                <i className="fa-solid fa-chevron-left"></i>
+              </button>
+            )}
+
+            {products.length < 10 ? (
+              <></>
+            ) : (
+              <button
+                onClick={() => setOffset((prev) => prev + limit)}
+                className="px-3 py-1 bg-red-700 text-white rounded-lg mt-3"
+              >
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            )}
+          </div>
+        ) : (
+          <></>
+        )}
       </div>
 
       {/* Add / Edit Product Modal */}

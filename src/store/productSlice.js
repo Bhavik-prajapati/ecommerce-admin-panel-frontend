@@ -4,9 +4,9 @@ import apiClient from "../api/apiClient";
 
 export const fetchProducts = createAsyncThunk(
   "products/fetchProducts",
-  async (_, { rejectWithValue }) => {
+  async (params = {limit:10,offset:0}, { rejectWithValue }) => {
     try {
-      const response = await apiClient.get("/products");
+      const response = await apiClient.get("/products",{params});
       return response.data;
     } catch (err) {
       return rejectWithValue(err.response?.data || "Server Error");
